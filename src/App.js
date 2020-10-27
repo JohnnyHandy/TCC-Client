@@ -21,9 +21,12 @@ function App() {
     socket.emit('FromClient', 'Hello, from the front.')
       // eslint-disable-next-line
   }, []);
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     socket.on('esp/led/status', status => setLedStatus(status))
-    socket.on('connectionStatus', status => setConnectionStatus(status))
+    socket.on('connectionStatus', status => {
+      console.log('connection status', status)
+      setConnectionStatus(status)
+    })
     socket.on('buttonStatus', status => setButtonStatus(status))
     potStatus && socket.on('potStatus', status => setPotStatus(status))
   })
