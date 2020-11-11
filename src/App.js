@@ -17,8 +17,15 @@ function App() {
   const [potStatus, setPotStatus] = React.useState('0')
   const[buttonStatus, setButtonStatus] = React.useState()
   const socket = socketIOClient(ENDPOINT);
+  const socketEmit = (payload) => {
+    return socket.emit('clientSocket', payload)
+  }
   React.useEffect(() => {
-    socket.emit('FromClient', 'Hello, from the front.')
+    socketEmit({
+      topic: 'front/presence',
+      message: 'Hello from the front'
+    })
+    sync()
       // eslint-disable-next-line
   }, []);
   React.useLayoutEffect(() => {
@@ -33,27 +40,27 @@ function App() {
   const ledControl = (value) => {
     setSwitch(value)
     let binaryValue = value ? '1' : '0'
-    const operation = {
-      '0': {
-        status: 0,
-        message: 'Turning Led Off'
-      },
-      '1':{
-        status: 1,
-        message: 'Turning Led on'
-      }
-    }
-    socket.emit('esp/led/control', operation[binaryValue])
+    socketEmit({
+      topic: 'esp/led/control',
+      message: binaryValue
+    })
   }
   const dimLed = (value) => {
-    socket.emit('rangeTest', value)
+    let valueToNumber = value * 1
+    let payload = Math.trunc(((valueToNumber)/100)*(1023)).toString()
+    socketEmit({
+      topic: 'esp/led/analogWrite',
+      message: payload
+    })
   }
 
   const handlePotSwitch = (value) => {
     setPotMode(value)
     let valueToSend = value === true ? 'true' : 'false'
-    socket.emit('potControl', valueToSend)
-    console.log('valueToSend', valueToSend)
+    socketEmit({
+      topic: 'esp/pot/control',
+      message: valueToSend
+    })
   }
 
   const StatusDiv = ({ value }) => {
@@ -99,7 +106,10 @@ function App() {
   }
 
   const sync = () => {
-    socket.emit('esp/led/status/get', 'ack')
+    socketEmit({
+      topic: 'esp/led/getStatus',
+      message: 'Requesting Led Status'
+    })
   }
   console.log('ledStatus', ledStatus)
   return (
