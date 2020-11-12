@@ -1,0 +1,11 @@
+export const API_PRESENCE = 'api/presence'
+export const FRONT_PRESENCE  = 'front/presence'
+
+export const ESP_LED_SENDSTATUS = 'esp/led/sendStatus'
+export const ESP_LED_GETSTATUS = 'esp/led/getStatus'
+export const ESP_LED_CONTROL = 'esp/led/control'
+export const ESP_CONNECTION_SENDSTATUS='esp/connection/sendStatus'
+export const ESP_BUTTON_SENDSTATUS = 'esp/button/sendStatus'
+export const ESP_POT_CONTROL = 'esp/pot/control'
+export const ESP_POT_SENDSTATUS = 'esp/pot/sendStatus'
+export const ESP_LED_ANALOGWRITE = 'esp/led/analogWrite'

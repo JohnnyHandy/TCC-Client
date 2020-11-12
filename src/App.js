@@ -7,6 +7,7 @@ import SyncIcon from '@material-ui/icons/Sync';
 
 import logo from './logo.svg';
 import './App.css';
+import * as topics from './topics'
 const ENDPOINT = "http://192.168.15.12:3000"
 
 function App() {
@@ -18,7 +19,7 @@ function App() {
   const[buttonStatus, setButtonStatus] = React.useState()
   const socket = socketIOClient(ENDPOINT);
   const socketEmit = (payload) => {
-    return socket.emit('clientSocket', payload)
+    return socket.emit('apiSocket', payload)
   }
   React.useEffect(() => {
     socketEmit({
@@ -28,20 +29,27 @@ function App() {
     sync()
       // eslint-disable-next-line
   }, []);
-  React.useLayoutEffect(() => {
-    socket.on('esp/led/status', status => setLedStatus(status))
-    socket.on('connectionStatus', status => {
-      console.log('connection status', status)
-      setConnectionStatus(status)
-    })
-    socket.on('buttonStatus', status => setButtonStatus(status))
-    potStatus && socket.on('potStatus', status => setPotStatus(status))
-  })
+  React.useCallback(socket.on('clientSocket', payload => {
+    console.log('payload', payload)
+    const { topic, message } = payload
+    switch(topic) {
+      case topics.ESP_CONNECTION_SENDSTATUS:
+        return setConnectionStatus(message)
+      case topics.ESP_LED_SENDSTATUS:
+        return setLedStatus(message)
+      case topics.ESP_POT_SENDSTATUS:
+        return potStatus && setPotStatus(message)
+      case topics.ESP_BUTTON_SENDSTATUS:
+        return setButtonStatus(message)
+      default: return
+    }
+  }), [socket])
+
   const ledControl = (value) => {
     setSwitch(value)
     let binaryValue = value ? '1' : '0'
     socketEmit({
-      topic: 'esp/led/control',
+      topic: topics.ESP_LED_CONTROL,
       message: binaryValue
     })
   }
@@ -49,7 +57,7 @@ function App() {
     let valueToNumber = value * 1
     let payload = Math.trunc(((valueToNumber)/100)*(1023)).toString()
     socketEmit({
-      topic: 'esp/led/analogWrite',
+      topic: topics.ESP_LED_ANALOGWRITE,
       message: payload
     })
   }
@@ -58,7 +66,7 @@ function App() {
     setPotMode(value)
     let valueToSend = value === true ? 'true' : 'false'
     socketEmit({
-      topic: 'esp/pot/control',
+      topic: topics.ESP_POT_CONTROL,
       message: valueToSend
     })
   }
@@ -107,11 +115,10 @@ function App() {
 
   const sync = () => {
     socketEmit({
-      topic: 'esp/led/getStatus',
+      topic: topics.ESP_LED_GETSTATUS,
       message: 'Requesting Led Status'
     })
   }
-  console.log('ledStatus', ledStatus)
   return (
     <div className="App">
       <div className="App-header">
