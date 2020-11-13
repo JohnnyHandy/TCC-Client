@@ -8,10 +8,39 @@ import SyncIcon from '@material-ui/icons/Sync';
 import logo from './logo.svg';
 import './App.css';
 import * as topics from './topics'
+import {
+  ConnectionStatusContainer,
+  AppContainer,
+  ReactLogoImg,
+  RectContainer,
+  PotBarLevelContainer,
+  PotLevelBar,
+  HeaderWrapper,
+  GridContainer,
+  StatusDiv
+} from './App.styles'
+
 const ENDPOINT = "http://192.168.15.12:3000"
 
+
+const PotStatusComponent = ({ level }) => (
+  <PotBarLevelContainer>
+    <PotLevelBar level={level} />
+  </PotBarLevelContainer>
+)
+
+const StatusComponent = ({ value }) => {
+  if(value === 'on' || value === 'Connected' || value+'' === '1' || value === true) {
+    return <StatusDiv backgroundColor={`green`} />
+  } else if(value === 'off' || value === 'Disconnected' || value+'' === '0' || value === false) {
+    return <StatusDiv backgroundColor={`red`} />
+  } else return <StatusDiv backgroundColor={`gray`} />
+}
+
+
 function App() {
-  const[connectionStatus, setConnectionStatus] = React.useState()
+  const [socketStatus, setSocketStatus] = React.useState(false)
+  const[espConnectionStatus, setEspConnectionStatus] = React.useState()
   const[ledStatus, setLedStatus] = React.useState()
   const[switchStatus, setSwitch] = React.useState(false)
   const[potMode, setPotMode] = React.useState(false)
@@ -21,20 +50,12 @@ function App() {
   const socketEmit = (payload) => {
     return socket.emit('apiSocket', payload)
   }
-  React.useEffect(() => {
-    socketEmit({
-      topic: 'front/presence',
-      message: 'Hello from the front'
-    })
-    sync()
-      // eslint-disable-next-line
-  }, []);
+
   React.useCallback(socket.on('clientSocket', payload => {
-    console.log('payload', payload)
     const { topic, message } = payload
     switch(topic) {
       case topics.ESP_CONNECTION_SENDSTATUS:
-        return setConnectionStatus(message)
+        return setEspConnectionStatus(message)
       case topics.ESP_LED_SENDSTATUS:
         return setLedStatus(message)
       case topics.ESP_POT_SENDSTATUS:
@@ -43,6 +64,25 @@ function App() {
         return setButtonStatus(message)
       default: return
     }
+  }), [socket])
+
+  React.useEffect(() => {
+    if(socketStatus) {
+      socketEmit({
+        topic: 'front/presence',
+        message: 'Hello from the front'
+      })
+      sync()
+    }
+    // eslint-disable-next-line
+  }, [socketStatus])
+
+  React.useCallback(socket.on('disconnect', payload => {
+    setSocketStatus(false)
+  }), [socket])
+
+  React.useCallback(socket.on('connect', payload => {
+    setSocketStatus(true)
   }), [socket])
 
   const ledControl = (value) => {
@@ -70,70 +110,26 @@ function App() {
       message: valueToSend
     })
   }
-
-  const StatusDiv = ({ value }) => {
-    if(value === 'on' || value === 'Connected' || value+'' === '1' || value === true) {
-      return (
-        <div
-          style={{
-            width: '32px',
-            height: '32px',
-            backgroundColor: 'green',
-            alignSelf: 'center',
-            borderRadius: '60%',
-            marginLeft: '1vw'
-          }}
-        />
-      )
-    } else if(value === 'off' || value === 'Disconnected' || value+'' === '0' || value === false) {
-      return (
-        <div
-          style={{
-            width: '32px',
-            height: '32px',
-            backgroundColor: 'red',
-            alignSelf: 'center',
-            borderRadius: '60%',
-            marginLeft: '1vw'
-
-          }}
-        />
-      )
-    } else return (
-      <div
-      style={{
-        width: '32px',
-        height: '32px',
-        backgroundColor: 'gray',
-        alignSelf: 'center',
-        borderRadius: '60%',
-        marginLeft: '1vw'
-      }}
-    />
-    )
-  }
-
   const sync = () => {
     socketEmit({
       topic: topics.ESP_LED_GETSTATUS,
       message: 'Requesting Led Status'
     })
   }
+
   return (
     <div className="App">
-      <div className="App-header">
-        <div style={{
-          width: '100%',
-          position: 'fixed',
-          top: '0',
-          backgroundColor: '#5F99BA',
-          display: 'flex'
-          }} >
-            <img src={logo} style={{ width: '10vw', height: '10vh' }} className="App-logo" alt="logo" />
-          <p>
-          Connection Status:
-          </p>
-          <StatusDiv value={connectionStatus} />
+      <AppContainer>
+        <HeaderWrapper>
+          <ReactLogoImg className='App-logo' src={logo} alt="logo" />
+          <ConnectionStatusContainer>
+          <span>Socket Connection Status:</span>
+            <StatusComponent value={socketStatus} />
+          </ConnectionStatusContainer>
+          <ConnectionStatusContainer>
+          <span>Esp Connection Status:</span>
+            <StatusComponent value={espConnectionStatus} />
+          </ConnectionStatusContainer>
           <IconButton
           style={{
             position: 'absolute',
@@ -145,123 +141,64 @@ function App() {
           <SyncIcon
           fontSize='large'/>
           </IconButton>
-        </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '40% 40%',
-            justifyContent: 'space-between',
-            width:'90%',
-            height: '70vh'
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}
-            >
+        </HeaderWrapper>
+        <GridContainer>
+          <RectContainer>
               <h3>
                 Reading
               </h3>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}
-            >
+          </RectContainer>
+          <RectContainer>
             <h3>
               Control
             </h3>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}
-            >
-            <p>
+          </RectContainer>
+          <RectContainer>
+            <span>
               Node MCU Led Status: {ledStatus}
-            </p>
-            <StatusDiv value={ledStatus} />
-          </div>
-          <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid black',
-              backgroundColor: 'lightgray'
-            }}>          
-            <p>
+            </span>
+            <StatusComponent value={ledStatus} />
+          </RectContainer>
+          <RectContainer>          
+            <span>
               Node MCU Led Control
-            </p>
-            <Switch checked={switchStatus} onClick={(e) => ledControl(e.target.checked)} />
-          </div>
-          <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexDirection: 'column',
-              justifyContent: 'space-around',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}>          
-            <p>Potentiometer status value : {potStatus}</p>
-            <div style={{ width: '80%', height: '5vh', backgroundColor: 'white' }}>
-              <div style={{ backgroundColor: 'green', height: '100%', width:`${100*(potStatus*1)/1024}%`}} />
-            </div>
-          </div>
-          <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}>          
+            </span>
+            <Switch
+              disabled={!espConnectionStatus}
+              checked={switchStatus}
+              onClick={(e) => ledControl(e.target.checked)}
+            />
+          </RectContainer>
+          <RectContainer flexDirection={`column`} >
+            <span>Potentiometer status value : {potStatus}</span>
+            <PotStatusComponent level={potStatus} />
+          </RectContainer>
+          <RectContainer>          
             <p>Potentiometer status control</p>
-            <Switch checked={potMode} onClick={(e) => handlePotSwitch(e.target.checked)} />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}
-            >
-            <p>
+            <Switch
+              disabled={!espConnectionStatus}
+              checked={potMode}
+              onClick={(e) => handlePotSwitch(e.target.checked)}
+            />
+          </RectContainer>
+          <RectContainer>
+            <span>
               Button Status:
-            </p>
-            <StatusDiv value={buttonStatus} />
-          </div>
-          <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexDirection: 'column',
-              justifyContent: 'space-around',
-              border: '2px solid black',
-              backgroundColor: 'lightgray',
-            }}>
-          <span style={{ width: '35vw' }}> PWM Led Control </span>
-          <Slider
-            min={0}
-            max={100}
-            onChange={(_, value) => dimLed(value)}
-            style={{ width: '15vw' }}
-          />
-        </div>
-        </div>
-      </div>
+            </span>
+            <StatusComponent value={buttonStatus} />
+          </RectContainer>
+          <RectContainer flexDirection={`column`} >
+            <span> PWM Led Control </span>
+            <Slider
+              disabled={!espConnectionStatus}
+              min={0}
+              max={100}
+              onChange={(_, value) => dimLed(value)}
+              style={{ width: '15vw' }}
+            />
+          </RectContainer>
+        </GridContainer>
+      </AppContainer>
     </div>
   );
 }
