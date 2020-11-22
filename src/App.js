@@ -2,6 +2,7 @@ import React from 'react';
 import socketIOClient from "socket.io-client";
 import Switch from '@material-ui/core/Switch'
 import Slider from '@material-ui/core/Slider'
+import RootRef from '@material-ui/core/RootRef'
 import IconButton from '@material-ui/core/IconButton';
 import SyncIcon from '@material-ui/icons/Sync';
 
@@ -43,9 +44,11 @@ function App() {
   const[espConnectionStatus, setEspConnectionStatus] = React.useState()
   const[ledStatus, setLedStatus] = React.useState()
   const[switchStatus, setSwitch] = React.useState(false)
+  const [slideValue, setSlide] = React.useState()
   const[potMode, setPotMode] = React.useState(false)
   const [potStatus, setPotStatus] = React.useState('0')
   const[buttonStatus, setButtonStatus] = React.useState()
+  const SliderRef = React.useRef()
   const socket = socketIOClient(ENDPOINT);
   const socketEmit = (payload) => {
     return socket.emit('apiSocket', payload)
@@ -53,15 +56,18 @@ function App() {
 
   React.useCallback(socket.on('clientSocket', payload => {
     const { topic, message } = payload
+    console.log('message', message)
     switch(topic) {
       case topics.ESP_CONNECTION_SENDSTATUS:
         return setEspConnectionStatus(message)
       case topics.ESP_LED_SENDSTATUS:
-        return setLedStatus(message)
+        return setLedStatus(message),setSwitch(Boolean(message * 1))
       case topics.ESP_POT_SENDSTATUS:
         return potStatus && setPotStatus(message)
       case topics.ESP_BUTTON_SENDSTATUS:
         return setButtonStatus(message)
+      case topics.ESP_POT_SENDCONTROL:
+        return updatePotSwitch(message)
       default: return
     }
   }), [socket])
@@ -96,27 +102,38 @@ function App() {
   const dimLed = (value) => {
     let valueToNumber = value * 1
     let payload = Math.trunc(((valueToNumber)/100)*(1023)).toString()
+
     socketEmit({
-      topic: topics.ESP_LED_ANALOGWRITE,
+      topic: topics.ESP_PWMLED_CONTROL,
       message: payload
     })
+  }
+
+  const updatePotSwitch = (value) => {
+    let newPotSwitchValue
+    if(value === 'false') {
+      newPotSwitchValue = false
+    } else if(value === 'true') {
+      newPotSwitchValue = true
+    }
+    setPotMode(newPotSwitchValue)
   }
 
   const handlePotSwitch = (value) => {
     setPotMode(value)
     let valueToSend = value === true ? 'true' : 'false'
     socketEmit({
-      topic: topics.ESP_POT_CONTROL,
+      topic: topics.ESP_POT_SETCONTROL,
       message: valueToSend
     })
   }
   const sync = () => {
     socketEmit({
-      topic: topics.ESP_LED_GETSTATUS,
-      message: 'Requesting Led Status'
+      topic: topics.ESP_OVERALL_GETSTATUS,
+      message: 'Requesting Overall Status'
     })
   }
-
+  console.log('sliderref', SliderRef)
   return (
     <div className="App">
       <AppContainer>
@@ -189,13 +206,15 @@ function App() {
           </RectContainer>
           <RectContainer flexDirection={`column`} >
             <span> PWM Led Control </span>
-            <Slider
-              disabled={!espConnectionStatus}
-              min={0}
-              max={100}
-              onChange={(_, value) => dimLed(value)}
-              style={{ width: '15vw' }}
-            />
+            <RootRef rootRef={SliderRef}>
+              <Slider
+                disabled={!espConnectionStatus}
+                min={0}
+                max={100}
+                onChange={(_, value) => dimLed(value)}
+                style={{ width: '15vw' }}
+              />
+            </RootRef>
           </RectContainer>
         </GridContainer>
       </AppContainer>
