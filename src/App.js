@@ -2,75 +2,58 @@ import React from 'react';
 import socketIOClient from "socket.io-client";
 import Switch from '@material-ui/core/Switch'
 import Slider from '@material-ui/core/Slider'
-import RootRef from '@material-ui/core/RootRef'
-import IconButton from '@material-ui/core/IconButton';
-import SyncIcon from '@material-ui/icons/Sync';
 
-import logo from './logo.svg';
 import './App.css';
 import * as topics from './topics'
 import {
-  ConnectionStatusContainer,
   AppContainer,
-  ReactLogoImg,
   RectContainer,
-  PotBarLevelContainer,
-  PotLevelBar,
-  HeaderWrapper,
-  GridContainer,
-  StatusDiv
+  GridContainer
 } from './App.styles'
+import Header from './components/header'
+import { StatusComponent, PotStatusComponent } from './components/status'
 
 const ENDPOINT = "http://192.168.15.12:3000"
-
-
-const PotStatusComponent = ({ level }) => (
-  <PotBarLevelContainer>
-    <PotLevelBar level={level} />
-  </PotBarLevelContainer>
-)
-
-const StatusComponent = ({ value }) => {
-  if(value === 'on' || value === 'Connected' || value+'' === '1' || value === true) {
-    return <StatusDiv backgroundColor={`green`} />
-  } else if(value === 'off' || value === 'Disconnected' || value+'' === '0' || value === false) {
-    return <StatusDiv backgroundColor={`red`} />
-  } else return <StatusDiv backgroundColor={`gray`} />
-}
+const socket = socketIOClient(ENDPOINT);
 
 
 function App() {
   const [socketStatus, setSocketStatus] = React.useState(false)
-  const[espConnectionStatus, setEspConnectionStatus] = React.useState()
-  const[ledStatus, setLedStatus] = React.useState()
-  const[switchStatus, setSwitch] = React.useState(false)
-  const [slideValue, setSlide] = React.useState()
-  const[potMode, setPotMode] = React.useState(false)
+  const [espConnectionStatus, setEspConnectionStatus] = React.useState()
+  const [ledStatus, setLedStatus] = React.useState()
+  const [switchStatus, setSwitch] = React.useState(false)
+  const [potMode, setPotMode] = React.useState(false)
   const [potStatus, setPotStatus] = React.useState('0')
-  const[buttonStatus, setButtonStatus] = React.useState()
-  const SliderRef = React.useRef()
-  const socket = socketIOClient(ENDPOINT);
+  const [buttonStatus, setButtonStatus] = React.useState()
+
+
   const socketEmit = (payload) => {
     return socket.emit('apiSocket', payload)
   }
 
-  React.useCallback(socket.on('clientSocket', payload => {
-    const { topic, message } = payload
-    console.log('message', message)
-    switch(topic) {
-      case topics.ESP_CONNECTION_SENDSTATUS:
-        return setEspConnectionStatus(message)
-      case topics.ESP_LED_SENDSTATUS:
-        return setLedStatus(message),setSwitch(Boolean(message * 1))
-      case topics.ESP_POT_SENDSTATUS:
-        return potStatus && setPotStatus(message)
-      case topics.ESP_BUTTON_SENDSTATUS:
-        return setButtonStatus(message)
-      case topics.ESP_POT_SENDCONTROL:
-        return updatePotSwitch(message)
-      default: return
+  React.useEffect(
+    () => {
+      socket.on('clientSocket', payload => {
+        const { topic, message } = payload
+        switch(topic) {
+          case topics.ESP_CONNECTION_SENDSTATUS:
+            return setEspConnectionStatus(message)
+          case topics.ESP_LED_SENDSTATUS: 
+              setLedStatus(message)
+              setSwitch(Boolean(message * 1))
+          break
+          case topics.ESP_POT_SENDSTATUS:
+            return potStatus && setPotStatus(message)
+          case topics.ESP_BUTTON_SENDSTATUS:
+            return setButtonStatus(message)
+          case topics.ESP_POT_SENDCONTROL:
+            return updatePotSwitch(message)
+          default: return
+        }
+      })  
     }
-  }), [socket])
+    // eslint-disable-next-line
+  , [])
 
   React.useEffect(() => {
     if(socketStatus) {
@@ -94,7 +77,7 @@ function App() {
   const ledControl = (value) => {
     setSwitch(value)
     let binaryValue = value ? '1' : '0'
-    socketEmit({
+    return socketEmit({
       topic: topics.ESP_LED_CONTROL,
       message: binaryValue
     })
@@ -103,7 +86,7 @@ function App() {
     let valueToNumber = value * 1
     let payload = Math.trunc(((valueToNumber)/100)*(1023)).toString()
 
-    socketEmit({
+    return socketEmit({
       topic: topics.ESP_PWMLED_CONTROL,
       message: payload
     })
@@ -116,49 +99,30 @@ function App() {
     } else if(value === 'true') {
       newPotSwitchValue = true
     }
-    setPotMode(newPotSwitchValue)
+    return setPotMode(newPotSwitchValue)
   }
 
   const handlePotSwitch = (value) => {
     setPotMode(value)
     let valueToSend = value === true ? 'true' : 'false'
-    socketEmit({
+    return socketEmit({
       topic: topics.ESP_POT_SETCONTROL,
       message: valueToSend
     })
   }
   const sync = () => {
-    socketEmit({
+    return socketEmit({
       topic: topics.ESP_OVERALL_GETSTATUS,
       message: 'Requesting Overall Status'
     })
   }
-  console.log('sliderref', SliderRef)
   return (
-    <div className="App">
       <AppContainer>
-        <HeaderWrapper>
-          <ReactLogoImg className='App-logo' src={logo} alt="logo" />
-          <ConnectionStatusContainer>
-          <span>Socket Connection Status:</span>
-            <StatusComponent value={socketStatus} />
-          </ConnectionStatusContainer>
-          <ConnectionStatusContainer>
-          <span>Esp Connection Status:</span>
-            <StatusComponent value={espConnectionStatus} />
-          </ConnectionStatusContainer>
-          <IconButton
-          style={{
-            position: 'absolute',
-            alignSelf: 'center',
-            right: '0'
-          }}
-          onClick={() => sync()}
-          >
-          <SyncIcon
-          fontSize='large'/>
-          </IconButton>
-        </HeaderWrapper>
+        <Header
+          socketStatus={socketStatus}
+          espConnectionStatus={espConnectionStatus}
+          sync={sync}
+        />
         <GridContainer>
           <RectContainer>
               <h3>
@@ -172,13 +136,13 @@ function App() {
           </RectContainer>
           <RectContainer>
             <span>
-              Node MCU Led Status: {ledStatus}
+              Node MCU Digital Controlled Led Status: {ledStatus}
             </span>
             <StatusComponent value={ledStatus} />
           </RectContainer>
           <RectContainer>          
             <span>
-              Node MCU Led Control
+              Node MCU Led Switch
             </span>
             <Switch
               disabled={!espConnectionStatus}
@@ -206,7 +170,6 @@ function App() {
           </RectContainer>
           <RectContainer flexDirection={`column`} >
             <span> PWM Led Control </span>
-            <RootRef rootRef={SliderRef}>
               <Slider
                 disabled={!espConnectionStatus}
                 min={0}
@@ -214,11 +177,9 @@ function App() {
                 onChange={(_, value) => dimLed(value)}
                 style={{ width: '15vw' }}
               />
-            </RootRef>
           </RectContainer>
         </GridContainer>
       </AppContainer>
-    </div>
   );
 }
 

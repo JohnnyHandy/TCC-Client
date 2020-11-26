@@ -32,12 +32,14 @@ export const RectContainer = styled('div')`
 
 export const PotBarLevelContainer = styled('div')`
   background-color: white;
+  border-radius: 10px;
   height: 5vh;
   width: 80%;
 `
 
 export const PotLevelBar= styled('div')`
   background-color: green;
+  border-radius: inherit;
   height: 100%;
   width:${props => 100*(props.level*1)/1024}%
 ` 
