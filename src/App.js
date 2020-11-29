@@ -138,14 +138,12 @@ function App() {
               Control
             </h3>
           </RectContainer>
-
           <RectContainer>
             <span>
               Digital Controlled Led Status: {ledStatus}
             </span>
             <StatusComponent value={ledStatus} />
           </RectContainer>
-
           <RectContainer>          
             <span>
               Digital Controlled Led Switch
@@ -156,12 +154,10 @@ function App() {
               onClick={(e) => ledControl(e.target.checked)}
             />
           </RectContainer>
-
           <RectContainer flexDirection={`column`} >
             <span>Potentiometer regulated voltage value : {potStatus}</span>
             <PotStatusComponent level={potStatus} />
           </RectContainer>
-
           <RectContainer>          
             <p>Potentiometer listening status control</p>
             <Switch
@@ -170,14 +166,12 @@ function App() {
               onClick={(e) => handlePotSwitch(e.target.checked)}
             />
           </RectContainer>
-
           <RectContainer>
             <span>
               Button Status:
             </span>
             <StatusComponent value={buttonStatus} />
           </RectContainer>
-
           <RectContainer flexDirection={`column`} >
             <span> PWM Led Control </span>
               <Slider
