@@ -19,7 +19,7 @@ const Header = ({
                 <StatusComponent value={socketStatus} />
             </ConnectionStatusContainer>
             <ConnectionStatusContainer>
-                <span>Esp Connection Status:</span>
+                <span>NodeMCU Connection Status:</span>
                 <StatusComponent value={espConnectionStatus} />
             </ConnectionStatusContainer>
             <IconButton

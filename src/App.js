@@ -18,18 +18,17 @@ const socket = socketIOClient(ENDPOINT);
 
 
 function App() {
-  const [socketStatus, setSocketStatus] = React.useState(false)
+  
+  const [socketStatus, setSocketStatus] = React.useState()
   const [espConnectionStatus, setEspConnectionStatus] = React.useState()
   const [ledStatus, setLedStatus] = React.useState()
-  const [switchStatus, setSwitch] = React.useState(false)
-  const [potMode, setPotMode] = React.useState(false)
+  const [switchStatus, setSwitch] = React.useState()
+  const [potMode, setPotMode] = React.useState()
   const [potStatus, setPotStatus] = React.useState('0')
   const [buttonStatus, setButtonStatus] = React.useState()
 
 
-  const socketEmit = (payload) => {
-    return socket.emit('apiSocket', payload)
-  }
+
 
   React.useEffect(
     () => {
@@ -41,7 +40,7 @@ function App() {
           case topics.ESP_LED_SENDSTATUS: 
               setLedStatus(message)
               setSwitch(Boolean(message * 1))
-          break
+          break;
           case topics.ESP_POT_SENDSTATUS:
             return potStatus && setPotStatus(message)
           case topics.ESP_BUTTON_SENDSTATUS:
@@ -66,22 +65,26 @@ function App() {
     // eslint-disable-next-line
   }, [socketStatus])
 
-  React.useCallback(socket.on('disconnect', payload => {
-    setSocketStatus(false)
-  }), [socket])
-
   React.useCallback(socket.on('connect', payload => {
     setSocketStatus(true)
   }), [socket])
 
+  React.useCallback(socket.on('disconnect', payload => {
+    setSocketStatus(false)
+  }), [socket])
+
+  const socketEmit = (payload) => {
+    return socket.emit('apiSocket', payload)
+  }
+
   const ledControl = (value) => {
-    setSwitch(value)
     let binaryValue = value ? '1' : '0'
     return socketEmit({
       topic: topics.ESP_LED_CONTROL,
       message: binaryValue
     })
   }
+
   const dimLed = (value) => {
     let valueToNumber = value * 1
     let payload = Math.trunc(((valueToNumber)/100)*(1023)).toString()
@@ -103,19 +106,20 @@ function App() {
   }
 
   const handlePotSwitch = (value) => {
-    setPotMode(value)
     let valueToSend = value === true ? 'true' : 'false'
     return socketEmit({
       topic: topics.ESP_POT_SETCONTROL,
       message: valueToSend
     })
   }
+
   const sync = () => {
     return socketEmit({
       topic: topics.ESP_OVERALL_GETSTATUS,
       message: 'Requesting Overall Status'
     })
   }
+  
   return (
       <AppContainer>
         <Header
@@ -134,44 +138,50 @@ function App() {
               Control
             </h3>
           </RectContainer>
+
           <RectContainer>
             <span>
-              Node MCU Digital Controlled Led Status: {ledStatus}
+              Digital Controlled Led Status: {ledStatus}
             </span>
             <StatusComponent value={ledStatus} />
           </RectContainer>
+
           <RectContainer>          
             <span>
-              Node MCU Led Switch
+              Digital Controlled Led Switch
             </span>
             <Switch
-              disabled={!espConnectionStatus}
+              disabled={!espConnectionStatus || !socketStatus}
               checked={switchStatus}
               onClick={(e) => ledControl(e.target.checked)}
             />
           </RectContainer>
+
           <RectContainer flexDirection={`column`} >
-            <span>Potentiometer status value : {potStatus}</span>
+            <span>Potentiometer regulated voltage value : {potStatus}</span>
             <PotStatusComponent level={potStatus} />
           </RectContainer>
+
           <RectContainer>          
-            <p>Potentiometer status control</p>
+            <p>Potentiometer listening status control</p>
             <Switch
-              disabled={!espConnectionStatus}
+              disabled={!espConnectionStatus || !socketStatus}
               checked={potMode}
               onClick={(e) => handlePotSwitch(e.target.checked)}
             />
           </RectContainer>
+
           <RectContainer>
             <span>
               Button Status:
             </span>
             <StatusComponent value={buttonStatus} />
           </RectContainer>
+
           <RectContainer flexDirection={`column`} >
             <span> PWM Led Control </span>
               <Slider
-                disabled={!espConnectionStatus}
+                disabled={!espConnectionStatus || !socketStatus}
                 min={0}
                 max={100}
                 onChange={(_, value) => dimLed(value)}
