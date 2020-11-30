@@ -140,7 +140,7 @@ function App() {
           </RectContainer>
           <RectContainer>
             <span>
-              Digital Controlled Led Status: {ledStatus}
+              Digital Controlled Led Status
             </span>
             <StatusComponent value={ledStatus} />
           </RectContainer>
@@ -155,7 +155,7 @@ function App() {
             />
           </RectContainer>
           <RectContainer flexDirection={`column`} >
-            <span>Potentiometer regulated voltage value : {potStatus}</span>
+            <span>Potentiometer regulated voltage : {(potStatus* 3.3/1023).toFixed(2)} V</span>
             <PotStatusComponent level={potStatus} />
           </RectContainer>
           <RectContainer>          
@@ -168,14 +168,14 @@ function App() {
           </RectContainer>
           <RectContainer>
             <span>
-              Button Status:
+              Button Status
             </span>
             <StatusComponent value={buttonStatus} />
           </RectContainer>
           <RectContainer flexDirection={`column`} >
             <span> PWM Led Control </span>
               <Slider
-                disabled={!espConnectionStatus || !socketStatus}
+                disabled={!espConnectionStatus || !socketStatus || potMode}
                 min={0}
                 max={100}
                 onChange={(_, value) => dimLed(value)}
